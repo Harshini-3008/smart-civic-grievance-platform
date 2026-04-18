@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>CivicPulse — Smart Grievance System</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#0b0f1a;--surface:#131929;--card:#1a2235;--border:#242f45;
+  --accent:#3b82f6;--accent2:#06d6a0;--warn:#f59e0b;--danger:#ef4444;
+  --text:#e8edf5;--muted:#6b7fa3;--heading:'Syne',sans-serif;--body:'DM Sans',sans-serif;
+  --radius:14px;--shadow:0 8px 32px rgba(0,0,0,.45);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.screen{display:none;min-height:100vh;animation:fadeIn .35s ease}
+.screen.active{display:flex;flex-direction:column}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.topbar-logo{font-family:var(--heading);font-weight:800;font-size:1.2rem;color:var(--accent);letter-spacing:-.5px}
+.topbar-logo span{color:var(--accent2)}
+.avatar-btn{width:38px;height:38px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:var(--heading);font-weight:700;color:#fff;font-size:.9rem;transition:transform .2s,box-shadow .2s}
+.avatar-btn:hover{transform:scale(1.08);box-shadow:0 0 0 3px rgba(59,130,246,.3)}
+.splash-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;background:radial-gradient(ellipse at 60% 0%,rgba(59,130,246,.12) 0%,transparent 60%),radial-gradient(ellipse at 10% 80%,rgba(6,214,160,.08) 0%,transparent 50%)}
+.splash-icon{font-size:3.5rem;margin-bottom:16px;filter:drop-shadow(0 4px 16px rgba(59,130,246,.4))}
+.splash-title{font-family:var(--heading);font-weight:800;font-size:clamp(1.8rem,6vw,2.8rem);line-height:1.1;margin-bottom:12px}
+.splash-title em{font-style:normal;color:var(--accent2)}
+.splash-sub{color:var(--muted);max-width:340px;line-height:1.6;margin-bottom:36px;font-size:.95rem}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 24px;border-radius:var(--radius);border:none;cursor:pointer;font-family:var(--body);font-weight:500;font-size:.95rem;transition:all .2s;text-decoration:none}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#2563eb;transform:translateY(-1px);box-shadow:0 6px 20px rgba(59,130,246,.35)}
+.btn-outline{background:transparent;color:var(--text);border:1.5px solid var(--border)}.btn-outline:hover{border-color:var(--accent);color:var(--accent)}
+.btn-success{background:var(--accent2);color:#0b0f1a;font-weight:600}.btn-success:hover{background:#04b88a;transform:translateY(-1px)}
+.btn-danger{background:var(--danger);color:#fff}.btn-danger:hover{background:#dc2626}
+.btn-warn{background:var(--warn);color:#0b0f1a;font-weight:600}.btn-warn:hover{background:#d97706}
+.btn-full{width:100%}.btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.form-wrap{width:100%;max-width:420px;margin:0 auto}
+.form-title{font-family:var(--heading);font-weight:700;font-size:1.5rem;margin-bottom:6px}
+.form-sub{color:var(--muted);font-size:.9rem;margin-bottom:28px}
+.field{margin-bottom:18px}
+.field label{display:block;font-size:.82rem;font-weight:500;color:var(--muted);margin-bottom:7px;letter-spacing:.03em;text-transform:uppercase}
+.field input,.field select,.field textarea{width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:var(--body);font-size:.95rem;transition:border-color .2s,box-shadow .2s;outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+.field textarea{resize:vertical;min-height:90px}
+.field select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7fa3' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center}
+.field-row{display:flex;gap:12px}.field-row .field{flex:1}
+.otp-row{display:flex;gap:10px;justify-content:center;margin:16px 0}
+.otp-input{width:48px;height:54px;text-align:center;font-size:1.3rem;font-weight:700;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--heading);outline:none;transition:all .2s}
+.otp-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+.tab-toggle{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:28px}
+.tab-toggle button{flex:1;padding:9px;border:none;border-radius:7px;cursor:pointer;font-family:var(--body);font-size:.9rem;font-weight:500;background:transparent;color:var(--muted);transition:all .2s}
+.tab-toggle button.active{background:var(--accent);color:#fff}
+.home-actions{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:20px}
+.action-card{background:var(--card);border:1.5px solid var(--border);border-radius:16px;padding:24px 18px;cursor:pointer;transition:all .25s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px}
+.action-card:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 12px 32px rgba(59,130,246,.18)}
+.action-card .ac-icon{font-size:2.2rem}.action-card .ac-title{font-family:var(--heading);font-weight:700;font-size:1rem}.action-card .ac-desc{color:var(--muted);font-size:.8rem;line-height:1.4}
+.stats-row{display:flex;gap:10px;padding:0 20px 16px;overflow-x:auto}
+.stat-pill{flex-shrink:0;background:var(--card);border:1px solid var(--border);border-radius:50px;padding:8px 16px;display:flex;align-items:center;gap:8px;font-size:.82rem}
+.stat-pill strong{font-family:var(--heading);font-size:1rem}
+.camera-zone{background:var(--surface);border:2px dashed var(--border);border-radius:var(--radius);min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.camera-zone:hover{border-color:var(--accent)}
+.camera-zone img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0;border-radius:var(--radius)}
+.camera-zone-label{color:var(--muted);font-size:.9rem;pointer-events:none}
+.camera-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.location-tag{display:flex;align-items:center;gap:8px;background:rgba(6,214,160,.1);border:1px solid rgba(6,214,160,.25);border-radius:8px;padding:10px 14px;font-size:.85rem;color:var(--accent2)}
+.issue-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:all .2s}
+.issue-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.issue-card img{width:100%;height:140px;object-fit:cover}
+.issue-body{padding:14px}
+.issue-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.issue-cat{font-size:.75rem;background:rgba(59,130,246,.15);color:var(--accent);border-radius:50px;padding:3px 10px;font-weight:500}
+.status-badge{font-size:.72rem;font-weight:600;border-radius:50px;padding:3px 10px}
+.status-pending{background:rgba(245,158,11,.15);color:var(--warn)}
+.status-accepted{background:rgba(59,130,246,.15);color:var(--accent)}
+.status-resolved{background:rgba(6,214,160,.15);color:var(--accent2)}
+.status-rejected{background:rgba(239,68,68,.15);color:var(--danger)}
+.issue-title{font-family:var(--heading);font-weight:600;font-size:.95rem;margin-bottom:6px}
+.issue-loc{color:var(--muted);font-size:.8rem;display:flex;align-items:center;gap:4px}
+.upvote-row{display:flex;align-items:center;gap:6px;margin-top:10px}
+.upvote-btn{display:flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--border);border-radius:50px;padding:5px 12px;cursor:pointer;font-size:.82rem;color:var(--muted);transition:all .2s;font-family:var(--body)}
+.upvote-btn:hover,.upvote-btn.active{background:rgba(59,130,246,.15);border-color:var(--accent);color:var(--accent)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .2s}
+.modal-overlay.hidden{display:none}
+.modal-sheet{background:var(--card);border-radius:20px 20px 0 0;padding:28px 24px 36px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;border:1px solid var(--border);border-bottom:none;animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px}
+.page{flex:1;overflow-y:auto;padding-bottom:80px}
+.page-header{padding:20px 20px 8px}
+.page-title{font-family:var(--heading);font-weight:800;font-size:1.4rem}
+.page-sub{color:var(--muted);font-size:.85rem;margin-top:4px}
+.section{padding:0 20px;margin-bottom:20px}
+.section-label{font-size:.8rem;font-weight:600;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px}
+.back-btn{display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:var(--body);font-size:.9rem;padding:0;transition:color .2s}
+.back-btn:hover{color:var(--text)}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--accent2);color:#0b0f1a;border-radius:50px;padding:10px 22px;font-weight:600;font-size:.88rem;z-index:999;white-space:nowrap;animation:toastIn .3s ease;box-shadow:0 8px 24px rgba(6,214,160,.3)}
+.toast.error{background:var(--danger);color:#fff}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;height:68px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;z-index:200}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:8px 16px;border-radius:12px;transition:all .2s;font-size:.7rem;font-weight:500;color:var(--muted)}
+.nav-item.active{color:var(--accent)}.nav-item .nav-icon{font-size:1.4rem}
+.auth-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;gap:14px;cursor:pointer;transition:all .2s}
+.auth-card:hover{border-color:var(--accent)}
+.auth-card img{width:72px;height:72px;border-radius:10px;object-fit:cover;flex-shrink:0}
+.auth-card-body{flex:1}
+.auth-card-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.detail-image{width:100%;height:220px;object-fit:cover}
+.info-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.info-icon{font-size:1.1rem;flex-shrink:0;margin-top:1px}
+.info-content label{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.info-content p{font-size:.92rem;margin-top:2px}
+.dup-alert{background:rgba(245,158,11,.1);border:1.5px solid rgba(245,158,11,.3);border-radius:var(--radius);padding:20px;text-align:center}
+.dup-alert h3{font-family:var(--heading);color:var(--warn);margin-bottom:8px}
+.dup-alert p{color:var(--muted);font-size:.88rem;margin-bottom:16px}
+.tracker-steps{display:flex;flex-direction:column;gap:0;padding:0 20px}
+.tracker-step{display:flex;gap:16px}
+.step-left{display:flex;flex-direction:column;align-items:center}
+.step-dot{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700}
+.step-dot.done{background:var(--accent2);color:#0b0f1a}.step-dot.active{background:var(--accent);color:#fff}.step-dot.pending{background:var(--border);color:var(--muted)}
+.step-line{width:2px;flex:1;min-height:32px;background:var(--border)}.step-line.done{background:var(--accent2)}
+.step-right{padding-bottom:28px;padding-top:4px}
+.step-title{font-weight:600;font-size:.92rem}.step-time{color:var(--muted);font-size:.78rem;margin-top:2px}
+.empty-state{text-align:center;padding:48px 24px;color:var(--muted)}
+.empty-state .es-icon{font-size:3rem;margin-bottom:12px;opacity:.4}
+.empty-state p{font-size:.9rem}
+.mt-16{margin-top:16px}.mt-8{margin-top:8px}
+.text-accent{color:var(--accent)}.text-muted{color:var(--muted);font-size:.85rem}.text-center{text-align:center}
+.divider{height:1px;background:var(--border);margin:20px 0}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.spinner{width:20px;height:20px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+@media(max-width:380px){.home-actions{grid-template-columns:1fr}.grid-2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="s-splash" class="screen active">
+  <div class="splash-wrap">
+    <div class="splash-icon">🏙️</div>
+    <h1 class="splash-title">Civic<em>Pulse</em></h1>
+    <p class="splash-sub">Report civic issues, track resolutions, and build a better city — together.</p>
+    <div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:320px;">
+      <button class="btn btn-primary btn-full" onclick="initLogin('citizen')">👤 Citizen Login / Register</button>
+      <button class="btn btn-outline btn-full" onclick="initLogin('authority')">🏛️ Authority Login / Register</button>
+    </div>
+    <p class="text-muted mt-16">Trusted by 50,000+ citizens · 1,200+ issues resolved</p>
+  </div>
+</div>
+
+<!-- LOGIN / REGISTER -->
+<div id="s-login" class="screen">
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:32px 24px;">
+    <div class="form-wrap">
+      <div style="margin-bottom:28px;"><button class="back-btn" onclick="goSplash()">← Back</button></div>
+      <div class="tab-toggle">
+        <button id="tab-login" class="active" onclick="switchTab('login')">Login</button>
+        <button id="tab-register" onclick="switchTab('register')">Register</button>
+      </div>
+
+      <!-- LOGIN -->
+      <div id="form-login">
+        <div class="form-title" id="login-title">Welcome back</div>
+        <div class="form-sub"  id="login-sub">Sign in to your citizen account</div>
+        <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="you@email.com"/></div>
+        <div class="field"><label>Password</label><input type="password" id="login-pass" placeholder="••••••••"/></div>
+        <div id="auth-login-extra" style="display:none;">
+          <div class="field"><label>Authority ID</label><input type="text" id="login-auth-id" placeholder="GHMC-2024-001"/></div>
+          <div class="field"><label>Department</label>
+            <select id="login-dept">
+              <option value="">Select department</option>
+              <option>Roads & Infrastructure</option><option>Water & Sanitation</option>
+              <option>Electricity Board</option><option>Parks & Environment</option>
+              <option>Public Safety</option><option>Waste Management</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" id="login-btn" onclick="doLogin()">Send OTP</button>
+        <p class="text-muted text-center mt-16">No account? <span class="text-accent" style="cursor:pointer" onclick="switchTab('register')">Register</span></p>
+      </div>
+
+      <!-- REGISTER -->
+      <div id="form-register" style="display:none;">
+        <div class="form-title">Create account</div>
+        <div class="form-sub" id="reg-sub">Join the civic community</div>
+        <div class="field-row">
+          <div class="field"><label>First name</label><input type="text" id="reg-fname" placeholder="Arjun"/></div>
+          <div class="field"><label>Last name</label><input type="text" id="reg-lname" placeholder="Sharma"/></div>
+        </div>
+        <div class="field"><label>Mobile</label><input type="tel" id="reg-phone" placeholder="+91 9876543210"/></div>
+        <div class="field"><label>Email</label><input type="email" id="reg-email" placeholder="you@email.com"/></div>
+        <div class="field"><label>Password</label><input type="password" id="reg-pass" placeholder="Create a strong password"/></div>
+        <div id="auth-reg-extra" style="display:none;">
+          <div class="field"><label>Authority / Employee ID</label><input type="text" id="reg-auth-id" placeholder="GHMC-2024-001"/></div>
+          <div class="field"><label>Department</label>
+            <select id="reg-dept">
+              <option value="">Select department</option>
+              <option>Roads & Infrastructure</option><option>Water & Sanitation</option>
+              <option>Electricity Board</option><option>Parks & Environment</option>
+              <option>Public Safety</option><option>Waste Management</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" id="reg-btn" onclick="doRegister()">Send OTP →</button>
+        <p class="text-muted text-center mt-16">Have an account? <span class="text-accent" style="cursor:pointer" onclick="switchTab('login')">Login</span></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- OTP -->
+<div id="s-otp" class="screen">
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:32px 24px;">
+    <div class="form-wrap" style="text-align:center;">
+      <div style="font-size:2.5rem;">📱</div>
+      <h2 class="form-title" style="text-align:center;margin-top:12px;">Verify OTP</h2>
+      <p class="form-sub" style="text-align:center;">6-digit code sent. <strong style="color:var(--text)">Use 123456 for demo</strong></p>
+      <div class="otp-row">
+        <input class="otp-input" maxlength="1" id="otp0" oninput="otpMove(this,0)"/>
+        <input class="otp-input" maxlength="1" id="otp1" oninput="otpMove(this,1)"/>
+        <input class="otp-input" maxlength="1" id="otp2" oninput="otpMove(this,2)"/>
+        <input class="otp-input" maxlength="1" id="otp3" oninput="otpMove(this,3)"/>
+        <input class="otp-input" maxlength="1" id="otp4" oninput="otpMove(this,4)"/>
+        <input class="otp-input" maxlength="1" id="otp5" oninput="otpMove(this,5)"/>
+      </div>
+      <button class="btn btn-primary btn-full" id="otp-btn" onclick="verifyOTP()">Verify & Continue</button>
+      <p class="text-muted mt-16">Didn't receive? <span class="text-accent" style="cursor:pointer">Resend OTP</span></p>
+    </div>
+  </div>
+</div>
+
+<!-- CITIZEN HOME -->
+<div id="s-home" class="screen">
+  <div class="topbar">
+    <div class="topbar-logo">Civic<span>Pulse</span></div>
+    <button class="avatar-btn" id="home-avatar" onclick="showModal('modal-profile')">A</button>
+  </div>
+  <div class="page">
+    <div class="page-header" style="padding-top:24px;">
+      <p class="text-muted">Good morning,</p>
+      <div class="page-title" id="home-name">Citizen 👋</div>
+    </div>
+    <div class="stats-row" style="margin-top:16px;">
+      <div class="stat-pill">📋 <strong id="stat-total">0</strong> Reports</div>
+      <div class="stat-pill">⏳ <strong id="stat-pending">0</strong> Pending</div>
+      <div class="stat-pill">✅ <strong id="stat-resolved">0</strong> Resolved</div>
+      <div class="stat-pill">👍 <strong id="stat-votes">0</strong> Upvotes received</div>
+    </div>
+    <div class="home-actions">
+      <div class="action-card" onclick="goScreen('s-report')">
+        <div class="ac-icon">📸</div>
+        <div class="ac-title">Report Issue</div>
+        <div class="ac-desc">Capture & submit a civic problem near you</div>
+      </div>
+      <div class="action-card" onclick="goScreen('s-track')">
+        <div class="ac-icon">📍</div>
+        <div class="ac-title">Track Status</div>
+        <div class="ac-desc">Follow up on your submitted reports</div>
+      </div>
+    </div>
+    <div class="section" style="margin-top:8px;">
+      <div class="section-label">Recent Issues in Your Area</div>
+      <div id="feed-list" style="display:flex;flex-direction:column;gap:14px;"><div class="empty-state"><div class="es-icon">🔄</div><p>Loading…</p></div></div>
+    </div>
+  </div>
+  <nav class="bottom-nav">
+    <div class="nav-item active" onclick="goScreen('s-home')"><div class="nav-icon">🏠</div><span>Home</span></div>
+    <div class="nav-item" onclick="goScreen('s-report')"><div class="nav-icon">➕</div><span>Report</span></div>
+    <div class="nav-item" onclick="goScreen('s-track')"><div class="nav-icon">📍</div><span>Track</span></div>
+    <div class="nav-item" onclick="showModal('modal-profile')"><div class="nav-icon">👤</div><span>Profile</span></div>
+  </nav>
+</div>
+
+<!-- REPORT ISSUE -->
+<div id="s-report" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="goScreen('s-home')">← Back</button>
+    <div class="topbar-logo">Civic<span>Pulse</span></div>
+    <div style="width:38px;"></div>
+  </div>
+  <div class="page">
+    <div class="page-header"><div class="page-title">Report an Issue</div><p class="page-sub">Help us fix your city</p></div>
+    <div class="section">
+      <div class="field">
+        <label>📸 Capture Image</label>
+        <div class="camera-zone" id="camera-zone">
+          <input type="file" id="img-input" accept="image/*" capture="environment" onchange="previewImage(this)"/>
+          <div id="camera-placeholder" style="display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;">
+            <div style="font-size:2.5rem;">📷</div>
+            <div class="camera-zone-label">Tap to capture or upload</div>
+            <div class="camera-zone-label" style="font-size:.75rem;">Photo helps authorities identify faster</div>
+          </div>
+          <img id="preview-img" style="display:none;"/>
+        </div>
+      </div>
+      <div class="field">
+        <label>📍 Location</label>
+        <div class="location-tag"><span>🔄</span><span id="location-text">Detecting…</span></div>
+      </div>
+      <div class="field">
+        <label>🏷️ Category</label>
+        <select id="issue-category">
+          <option value="">Select category</option>
+          <option value="roads">🛣️ Roads & Potholes</option>
+          <option value="water">💧 Water Supply / Leakage</option>
+          <option value="electricity">⚡ Street Light / Electricity</option>
+          <option value="garbage">🗑️ Garbage / Waste</option>
+          <option value="drainage">🌊 Drainage / Flooding</option>
+          <option value="trees">🌳 Trees / Green Spaces</option>
+          <option value="noise">🔊 Noise Pollution</option>
+          <option value="other">🔧 Other</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>📝 Description</label>
+        <textarea id="issue-desc" placeholder="Describe the issue — what, when, impact…"></textarea>
+      </div>
+      <button class="btn btn-primary btn-full" id="submit-btn" onclick="submitReport()">🚀 Submit Report</button>
+    </div>
+  </div>
+</div>
+
+<!-- DUPLICATE -->
+<div id="s-duplicate" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="goScreen('s-report')">← Back</button>
+    <div class="topbar-logo">Civic<span>Pulse</span></div>
+    <div style="width:38px;"></div>
+  </div>
+  <div class="page" style="display:flex;align-items:center;justify-content:center;padding:32px 24px;">
+    <div style="max-width:380px;width:100%;">
+      <div class="dup-alert">
+        <div style="font-size:3rem;margin-bottom:12px;">⚠️</div>
+        <h3>Already Reported!</h3>
+        <p>This issue was already reported nearby. Upvote it to increase priority.</p>
+        <div id="dup-card" style="text-align:left;margin-bottom:16px;"></div>
+        <button class="btn btn-warn btn-full" onclick="upvoteDuplicate()">👍 Upvote This Issue</button>
+        <button class="btn btn-outline btn-full mt-16" onclick="goScreen('s-home')">Go to Home</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS -->
+<div id="s-success" class="screen">
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:32px 24px;">
+    <div style="text-align:center;max-width:360px;">
+      <div style="font-size:4rem;margin-bottom:16px;animation:pulse 1.5s infinite;">✅</div>
+      <h2 style="font-family:var(--heading);font-weight:800;font-size:1.6rem;margin-bottom:10px;">Report Submitted!</h2>
+      <p style="color:var(--muted);margin-bottom:8px;">Forwarded to the concerned authority.</p>
+      <div class="card" style="margin:20px 0;text-align:left;">
+        <p style="font-size:.82rem;color:var(--muted);">Report ID</p>
+        <p style="font-family:var(--heading);font-weight:700;color:var(--accent);font-size:1.1rem;" id="success-id">#CP-…</p>
+        <div class="divider"></div>
+        <p style="font-size:.82rem;color:var(--muted);">Status</p>
+        <p><span class="status-badge status-pending">⏳ Pending</span></p>
+      </div>
+      <p style="color:var(--muted);font-size:.85rem;margin-bottom:24px;">Others can upvote to prioritize it.</p>
+      <button class="btn btn-primary btn-full" onclick="goScreen('s-track')">Track My Reports</button>
+      <button class="btn btn-outline btn-full mt-16" onclick="goScreen('s-home')">Back to Home</button>
+    </div>
+  </div>
+</div>
+
+<!-- TRACK -->
+<div id="s-track" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="goScreen('s-home')">← Back</button>
+    <div class="topbar-logo">Civic<span>Pulse</span></div>
+    <div style="width:38px;"></div>
+  </div>
+  <div class="page">
+    <div class="page-header"><div class="page-title">My Reports</div><p class="page-sub">Track your submissions</p></div>
+    <div class="section"><div id="track-list" style="display:flex;flex-direction:column;gap:14px;"></div></div>
+  </div>
+</div>
+
+<!-- CITIZEN DETAIL -->
+<div id="s-detail" class="screen">
+  <div class="topbar">
+    <button class="back-btn" id="detail-back" onclick="goScreen('s-track')">← Back</button>
+    <div class="topbar-logo">Civic<span>Pulse</span></div>
+    <div style="width:38px;"></div>
+  </div>
+  <div class="page">
+    <img id="detail-img" class="detail-image" src="" alt="Issue"/>
+    <div class="section" style="margin-top:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <span class="issue-cat" id="detail-cat"></span>
+        <span class="status-badge" id="detail-status"></span>
+      </div>
+      <h2 style="font-family:var(--heading);font-weight:700;font-size:1.2rem;margin-bottom:16px;" id="detail-title"></h2>
+      <div id="detail-timeline"></div>
+      <div class="divider"></div>
+      <div class="info-row"><div class="info-icon">📍</div><div class="info-content"><label>Location</label><p id="detail-location"></p></div></div>
+      <div class="info-row"><div class="info-icon">📝</div><div class="info-content"><label>Description</label><p id="detail-desc"></p></div></div>
+      <div class="info-row"><div class="info-icon">📅</div><div class="info-content"><label>Reported on</label><p id="detail-date"></p></div></div>
+      <div class="info-row" id="detail-resolve-row" style="display:none;">
+        <div class="info-icon">✅</div>
+        <div class="info-content"><label>Resolution Proof</label><img id="detail-resolve-img" src="" style="width:100%;border-radius:10px;margin-top:8px;"/></div>
+      </div>
+      <div class="info-row" id="detail-reject-row" style="display:none;">
+        <div class="info-icon">❌</div>
+        <div class="info-content"><label>Rejection Reason</label><p id="detail-reject-reason" style="color:var(--danger)"></p></div>
+      </div>
+      <div class="divider"></div>
+      <div class="upvote-row">
+        <button class="upvote-btn" id="detail-upvote-btn" onclick="toggleUpvote()">👍 <span id="detail-upvote-count">0</span> Upvotes</button>
+        <span class="text-muted">Help prioritize this issue</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AUTHORITY HOME -->
+<div id="s-auth-home" class="screen">
+  <div class="topbar">
+    <div class="topbar-logo">Civic<span>Pulse</span> <span style="font-size:.7rem;color:var(--muted);font-family:var(--body)">Authority</span></div>
+    <button class="avatar-btn" style="background:var(--accent2);color:#0b0f1a;" id="auth-avatar" onclick="showModal('modal-auth-profile')">A</button>
+  </div>
+  <div class="page">
+    <div class="page-header" style="padding-top:20px;">
+      <p class="text-muted" id="auth-dept-label">Department</p>
+      <div class="page-title" id="auth-name">Authority Dashboard</div>
+    </div>
+    <div class="stats-row" style="margin-top:12px;">
+      <div class="stat-pill">📥 <strong id="a-stat-total">0</strong> Total</div>
+      <div class="stat-pill">⏳ <strong id="a-stat-pending">0</strong> Pending</div>
+      <div class="stat-pill">🔄 <strong id="a-stat-accepted">0</strong> Accepted</div>
+      <div class="stat-pill">✅ <strong id="a-stat-resolved">0</strong> Resolved</div>
+    </div>
+    <div style="padding:16px 20px 0;display:flex;gap:8px;overflow-x:auto;">
+      <button class="btn btn-primary" id="filter-all"      onclick="filterComplaints('all')"      style="padding:8px 16px;font-size:.82rem;white-space:nowrap;">All</button>
+      <button class="btn btn-outline" id="filter-pending"  onclick="filterComplaints('pending')"  style="padding:8px 16px;font-size:.82rem;white-space:nowrap;">Pending</button>
+      <button class="btn btn-outline" id="filter-accepted" onclick="filterComplaints('accepted')" style="padding:8px 16px;font-size:.82rem;white-space:nowrap;">Accepted</button>
+      <button class="btn btn-outline" id="filter-resolved" onclick="filterComplaints('resolved')" style="padding:8px 16px;font-size:.82rem;white-space:nowrap;">Resolved</button>
+    </div>
+    <div class="section" style="margin-top:16px;"><div id="complaint-list" style="display:flex;flex-direction:column;gap:12px;"></div></div>
+  </div>
+</div>
+
+<!-- AUTHORITY DETAIL -->
+<div id="s-auth-detail" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="goScreen('s-auth-home')">← Back</button>
+    <div class="topbar-logo">Complaint Detail</div>
+    <div style="width:38px;"></div>
+  </div>
+  <div class="page">
+    <img id="ad-img" class="detail-image" src="" alt="Issue"/>
+    <div class="section" style="margin-top:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span class="issue-cat" id="ad-cat"></span>
+        <span class="status-badge" id="ad-status"></span>
+      </div>
+      <h2 style="font-family:var(--heading);font-weight:700;font-size:1.2rem;" id="ad-title"></h2>
+      <div style="margin:14px 0;">
+        <div class="info-row"><div class="info-icon">📍</div><div class="info-content"><label>Location</label><p id="ad-location"></p></div></div>
+        <div class="info-row"><div class="info-icon">📝</div><div class="info-content"><label>Description</label><p id="ad-desc"></p></div></div>
+        <div class="info-row"><div class="info-icon">👍</div><div class="info-content"><label>Upvotes</label><p id="ad-upvotes" style="font-family:var(--heading);font-weight:700;font-size:1.1rem;color:var(--accent);"></p></div></div>
+        <div class="info-row"><div class="info-icon">📅</div><div class="info-content"><label>Reported on</label><p id="ad-date"></p></div></div>
+        <div class="info-row"><div class="info-icon">👤</div><div class="info-content"><label>Reported by</label><p id="ad-reporter"></p></div></div>
+      </div>
+      <div id="ad-actions" style="display:flex;flex-direction:column;gap:10px;margin-top:8px;"></div>
+      <div id="ad-resolve-section" style="display:none;margin-top:20px;">
+        <div class="divider"></div>
+        <h3 style="font-family:var(--heading);font-weight:700;margin-bottom:12px;">📸 Resolution Proof</h3>
+        <p style="color:var(--muted);font-size:.85rem;margin-bottom:14px;">Upload a photo proving the issue is fixed — required before marking resolved.</p>
+        <div class="camera-zone" style="margin-bottom:14px;" onclick="document.getElementById('resolve-img-input').click()">
+          <input type="file" id="resolve-img-input" accept="image/*" capture="environment" onchange="previewResolutionImage(this)"/>
+          <div id="resolve-placeholder" style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+            <div style="font-size:2rem;">📷</div>
+            <div class="camera-zone-label">Capture resolution proof</div>
+          </div>
+          <img id="resolve-preview" style="display:none;"/>
+        </div>
+        <button class="btn btn-success btn-full" id="mark-resolved-btn" disabled onclick="markAsResolved()">✅ Mark as Resolved</button>
+      </div>
+      <div id="ad-reject-section" style="display:none;margin-top:20px;">
+        <div class="divider"></div>
+        <div class="field">
+          <label>Reason for Rejection</label>
+          <textarea id="reject-reason" placeholder="Explain why…"></textarea>
+        </div>
+        <button class="btn btn-danger btn-full" id="reject-confirm-btn" onclick="confirmReject()">Confirm Reject</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div id="modal-profile" class="modal-overlay hidden" onclick="closeModalOutside(event,'modal-profile')">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+      <div style="width:56px;height:56px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--heading);font-weight:800;font-size:1.3rem;" id="profile-avatar-big">A</div>
+      <div>
+        <div style="font-family:var(--heading);font-weight:700;font-size:1.1rem;" id="profile-name-modal">Citizen</div>
+        <div style="color:var(--muted);font-size:.82rem;" id="profile-email-modal">email</div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="grid-2">
+        <div style="text-align:center;padding:10px;"><div style="font-family:var(--heading);font-weight:800;font-size:1.4rem;color:var(--accent);" id="pm-total">0</div><div style="font-size:.78rem;color:var(--muted);">Reports</div></div>
+        <div style="text-align:center;padding:10px;"><div style="font-family:var(--heading);font-weight:800;font-size:1.4rem;color:var(--accent2);" id="pm-resolved">0</div><div style="font-size:.78rem;color:var(--muted);">Resolved</div></div>
+      </div>
+    </div>
+    <button class="btn btn-outline btn-full" onclick="logout()">🚪 Logout</button>
+  </div>
+</div>
+
+<div id="modal-auth-profile" class="modal-overlay hidden" onclick="closeModalOutside(event,'modal-auth-profile')">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+      <div style="width:56px;height:56px;border-radius:50%;background:var(--accent2);display:flex;align-items:center;justify-content:center;font-family:var(--heading);font-weight:800;font-size:1.3rem;color:#0b0f1a;" id="auth-profile-avatar">A</div>
+      <div>
+        <div style="font-family:var(--heading);font-weight:700;font-size:1.1rem;" id="auth-profile-name">Authority</div>
+        <div style="color:var(--muted);font-size:.82rem;" id="auth-profile-dept">Department</div>
+        <div style="color:var(--muted);font-size:.78rem;" id="auth-profile-id">ID: ---</div>
+      </div>
+    </div>
+    <button class="btn btn-outline btn-full" onclick="logoutAuth()">🚪 Logout</button>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const API = 'http://localhost:3000/api';
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+const S = {
+  userType: 'citizen',     // 'citizen' | 'authority'
+  action:   'login',
+  token:    localStorage.getItem('cp_token') || null,
+  user:     JSON.parse(localStorage.getItem('cp_user') || 'null'),
+  location: null,
+  capturedFile: null,
+  resolveFile:  null,
+  currentReportId: null,
+  dupReportId:     null,
+  activeFilter:    'all',
+};
+
+// ── API HELPER ────────────────────────────────────────────────────────────────
+async function api(method, path, body, isForm = false) {
+  const opts = {
+    method,
+    headers: {},
+  };
+  if (S.token) opts.headers['Authorization'] = 'Bearer ' + S.token;
+
+  if (body) {
+    if (isForm) {
+      opts.body = body; // FormData — don't set Content-Type
+    } else {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(body);
+    }
+  }
+
+  try {
+    const res  = await fetch(API + path, opts);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Server error');
+    return data;
+  } catch (e) {
+    // If backend is unreachable, use offline fallback
+    console.warn('API error:', e.message);
+    throw e;
+  }
+}
+
+// ── SCREEN NAVIGATION ─────────────────────────────────────────────────────────
+function goScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 's-home')      renderHome();
+  if (id === 's-track')     renderTrack();
+  if (id === 's-auth-home') renderAuthHome();
+  if (id === 's-report')    initReport();
+  window.scrollTo(0, 0);
+}
+
+function goSplash() { goScreen('s-splash'); }
+
+function showModal(id) {
+  refreshProfileModal();
+  document.getElementById(id).classList.remove('hidden');
+}
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+function closeModalOutside(e, id) { if (e.target.id === id) closeModal(id); }
+
+// ── LOGIN INIT ────────────────────────────────────────────────────────────────
+function initLogin(type) {
+  S.userType = type;
+  switchTab('login');
+  goScreen('s-login');
+}
+
+function switchTab(tab) {
+  S.action = tab;
+  const isAuth = S.userType === 'authority';
+  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+  document.getElementById('form-login').style.display   = tab === 'login'    ? 'block' : 'none';
+  document.getElementById('form-register').style.display = tab === 'register' ? 'block' : 'none';
+  document.getElementById('auth-login-extra').style.display = isAuth && tab === 'login'    ? 'block' : 'none';
+  document.getElementById('auth-reg-extra').style.display   = isAuth && tab === 'register' ? 'block' : 'none';
+  document.getElementById('login-title').textContent = isAuth ? 'Authority Login'   : 'Welcome back';
+  document.getElementById('login-sub').textContent   = isAuth ? 'Sign in with your authority credentials' : 'Sign in to your citizen account';
+  document.getElementById('reg-sub').textContent     = isAuth ? 'Create an authority account' : 'Join the civic community';
+}
+
+// ── AUTH FLOW ─────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const email = v('login-email'), pass = v('login-pass');
+  if (!email || !pass) return showToast('Please fill all fields', true);
+  setLoading('login-btn', true);
+  try {
+    const endpoint = S.userType === 'authority'
+      ? '/auth/authority/login/send-otp'
+      : '/auth/login/send-otp';
+    const body = { email, password: pass };
+    if (S.userType === 'authority') {
+      body.auth_id = v('login-auth-id');
+    }
+    await api('POST', endpoint, body);
+    showToast('OTP sent! Use 123456 for demo.');
+    goScreen('s-otp');
+  } catch (e) { showToast(e.message, true); }
+  finally { setLoading('login-btn', false); }
+}
+
+async function doRegister() {
+  const fname = v('reg-fname'), email = v('reg-email'), pass = v('reg-pass');
+  if (!fname || !email || !pass) return showToast('Please fill all fields', true);
+  setLoading('reg-btn', true);
+  try {
+    const endpoint = S.userType === 'authority'
+      ? '/auth/authority/register/send-otp'
+      : '/auth/register/send-otp';
+    const body = { first_name: fname, last_name: v('reg-lname'), email, phone: v('reg-phone'), password: pass };
+    if (S.userType === 'authority') {
+      body.dept    = v('reg-dept');
+      body.auth_id = v('reg-auth-id');
+    }
+    await api('POST', endpoint, body);
+    showToast('OTP sent! Use 123456 for demo.');
+    goScreen('s-otp');
+  } catch (e) { showToast(e.message, true); }
+  finally { setLoading('reg-btn', false); }
+}
+
+function otpMove(el, idx) {
+  if (el.value.length === 1 && idx < 5) document.getElementById('otp' + (idx + 1)).focus();
+}
+
+async function verifyOTP() {
+  const otp = [0,1,2,3,4,5].map(i => document.getElementById('otp' + i).value).join('');
+  if (otp.length < 6) return showToast('Enter 6-digit OTP', true);
+  setLoading('otp-btn', true);
+
+  // Determine correct verify endpoint
+  let endpoint;
+  if (S.userType === 'authority') {
+    endpoint = S.action === 'login'
+      ? '/auth/authority/login/verify-otp'
+      : '/auth/authority/register/verify-otp';
+  } else {
+    endpoint = S.action === 'login'
+      ? '/auth/login/verify-otp'
+      : '/auth/register/verify-otp';
+  }
+
+  // Build payload
+  const email = v(S.action === 'login' ? 'login-email' : 'reg-email');
+  const body  = { email, otp };
+
+  if (S.action === 'register') {
+    body.first_name = v('reg-fname');
+    body.last_name  = v('reg-lname');
+    body.phone      = v('reg-phone');
+    body.password   = v('reg-pass');
+    if (S.userType === 'authority') {
+      body.dept    = v('reg-dept');
+      body.auth_id = v('reg-auth-id');
+    }
+  }
+
+  try {
+    const data = await api('POST', endpoint, body);
+    S.token = data.token;
+    S.user  = data.user;
+    localStorage.setItem('cp_token', S.token);
+    localStorage.setItem('cp_user',  JSON.stringify(S.user));
+    showToast('Welcome to CivicPulse! 🎉');
+    afterLogin();
+  } catch (e) { showToast(e.message, true); }
+  finally { setLoading('otp-btn', false); }
+}
+
+function afterLogin() {
+  if (S.user.role === 'authority') {
+    document.getElementById('auth-name').textContent     = S.user.first_name + ' 🏛️';
+    document.getElementById('auth-dept-label').textContent = S.user.dept || 'Authority';
+    document.getElementById('auth-avatar').textContent    = S.user.first_name[0].toUpperCase();
+    goScreen('s-auth-home');
+  } else {
+    document.getElementById('home-name').textContent   = S.user.first_name + ' ' + (S.user.last_name || '') + ' 👋';
+    document.getElementById('home-avatar').textContent = S.user.first_name[0].toUpperCase();
+    goScreen('s-home');
+  }
+}
+
+// ── HOME ──────────────────────────────────────────────────────────────────────
+async function renderHome() {
+  try {
+    const data = await api('GET', '/users/me');
+    const st   = data.stats;
+    document.getElementById('stat-total').textContent    = st.total;
+    document.getElementById('stat-pending').textContent  = st.pending;
+    document.getElementById('stat-resolved').textContent = st.resolved;
+    document.getElementById('stat-votes').textContent    = st.total_upvotes_received;
+  } catch(_) {}
+  renderFeed();
+}
+
+async function renderFeed() {
+  const el = document.getElementById('feed-list');
+  el.innerHTML = '<div class="empty-state"><div class="es-icon">🔄</div><p>Loading…</p></div>';
+  try {
+    const data = await api('GET', '/reports');
+    if (!data.reports.length) { el.innerHTML = '<div class="empty-state"><div class="es-icon">📋</div><p>No reports yet in your area.</p></div>'; return; }
+    el.innerHTML = data.reports.map(r => issueCardHTML(r, 's-home')).join('');
+  } catch (e) { el.innerHTML = `<div class="empty-state"><div class="es-icon">⚠️</div><p>${e.message}</p></div>`; }
+}
+
+function issueCardHTML(r, from) {
+  const img = r.image_url || 'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=600&q=80';
+  return `
+  <div class="issue-card" onclick="openDetail('${r.id}','${from}')">
+    <img src="${img}" alt="${r.title}" onerror="this.style.display='none'"/>
+    <div class="issue-body">
+      <div class="issue-meta">
+        <span class="issue-cat">${r.category_label}</span>
+        <span class="status-badge status-${r.status}">${statusLabel(r.status)}</span>
+      </div>
+      <div class="issue-title">${r.title}</div>
+      <div class="issue-loc">📍 ${r.location}</div>
+      <div class="upvote-row">
+        <button class="upvote-btn ${r.user_upvoted ? 'active' : ''}" onclick="event.stopPropagation();quickUpvote('${r.id}',this)">
+          👍 <span>${r.upvotes}</span>
+        </button>
+        <span class="text-muted" style="font-size:.78rem">· ${r.created_at?.split('T')[0] || r.created_at}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+function statusLabel(s) {
+  return { pending:'⏳ Pending', accepted:'🔄 Accepted', resolved:'✅ Resolved', rejected:'❌ Rejected' }[s] || s;
+}
+
+async function quickUpvote(id, btn) {
+  try {
+    const data = await api('POST', `/reports/${id}/upvote`);
+    btn.querySelector('span').textContent = data.upvotes;
+    btn.classList.toggle('active', data.user_upvoted);
+    showToast(data.action === 'added' ? '👍 Upvoted!' : 'Upvote removed');
+  } catch (e) { showToast(e.message, true); }
+}
+
+// ── TRACK ─────────────────────────────────────────────────────────────────────
+async function renderTrack() {
+  const el = document.getElementById('track-list');
+  el.innerHTML = '<div class="empty-state"><div class="es-icon">🔄</div><p>Loading…</p></div>';
+  try {
+    const data = await api('GET', '/reports/mine');
+    if (!data.reports.length) { el.innerHTML = '<div class="empty-state"><div class="es-icon">📋</div><p>No reports submitted yet.</p></div>'; return; }
+    el.innerHTML = data.reports.map(r => issueCardHTML(r, 's-track')).join('');
+  } catch (e) { el.innerHTML = `<div class="empty-state"><div class="es-icon">⚠️</div><p>${e.message}</p></div>`; }
+}
+
+// ── DETAIL (CITIZEN) ──────────────────────────────────────────────────────────
+async function openDetail(id, from) {
+  S.currentReportId = id;
+  document.getElementById('detail-back').onclick = () => goScreen(from);
+  try {
+    const data = await api('GET', `/reports/${id}`);
+    const r    = data.report;
+    document.getElementById('detail-img').src        = r.image_url || '';
+    document.getElementById('detail-cat').textContent = r.category_label;
+    document.getElementById('detail-title').textContent    = r.title;
+    document.getElementById('detail-location').textContent = r.location;
+    document.getElementById('detail-desc').textContent     = r.description;
+    document.getElementById('detail-date').textContent     = r.created_at?.split('T')[0] || r.created_at;
+    document.getElementById('detail-upvote-count').textContent = r.upvotes;
+    const sb = document.getElementById('detail-status');
+    sb.textContent = statusLabel(r.status); sb.className = 'status-badge status-' + r.status;
+    document.getElementById('detail-upvote-btn').classList.toggle('active', r.user_upvoted);
+
+    // Resolution proof
+    const rrow = document.getElementById('detail-resolve-row');
+    if (r.status === 'resolved' && r.resolve_image_url) {
+      rrow.style.display = 'flex';
+      document.getElementById('detail-resolve-img').src = r.resolve_image_url;
+    } else { rrow.style.display = 'none'; }
+
+    // Rejection reason
+    const rejrow = document.getElementById('detail-reject-row');
+    if (r.status === 'rejected' && r.reject_reason) {
+      rejrow.style.display = 'flex';
+      document.getElementById('detail-reject-reason').textContent = r.reject_reason;
+    } else { rejrow.style.display = 'none'; }
+
+    // Timeline
+    document.getElementById('detail-timeline').innerHTML = buildTimeline(r);
+    goScreen('s-detail');
+  } catch (e) { showToast(e.message, true); }
+}
+
+function buildTimeline(r) {
+  const stages = [
+    { label: 'Submitted',           done: true,                                              time: r.created_at?.split('T')[0] },
+    { label: 'Accepted by Authority', done: ['accepted','resolved'].includes(r.status),      time: '' },
+    { label: 'Resolved',             done: r.status === 'resolved',                          time: '' },
+  ];
+  if (r.status === 'rejected') {
+    stages[1] = { label: 'Rejected', done: true, time: '' };
+    stages[2] = null;
+  }
+  return '<div class="tracker-steps">' + stages.filter(Boolean).map((s, i, arr) => {
+    const dotClass = s.done ? 'done' : (i === arr.findIndex(x => !x.done) ? 'active' : 'pending');
+    const last = i === arr.length - 1;
+    return `<div class="tracker-step">
+      <div class="step-left">
+        <div class="step-dot ${dotClass}">${s.done ? '✓' : (i+1)}</div>
+        ${!last ? `<div class="step-line ${s.done ? 'done' : ''}"></div>` : ''}
+      </div>
+      <div class="step-right">
+        <div class="step-title">${s.label}</div>
+        ${s.time ? `<div class="step-time">${s.time}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+async function toggleUpvote() {
+  try {
+    const data = await api('POST', `/reports/${S.currentReportId}/upvote`);
+    document.getElementById('detail-upvote-count').textContent = data.upvotes;
+    document.getElementById('detail-upvote-btn').classList.toggle('active', data.user_upvoted);
+    showToast(data.action === 'added' ? '👍 Upvoted!' : 'Upvote removed');
+  } catch (e) { showToast(e.message, true); }
+}
+
+// ── REPORT ISSUE ──────────────────────────────────────────────────────────────
+function initReport() {
+  S.capturedFile = null;
+  document.getElementById('preview-img').style.display = 'none';
+  document.getElementById('camera-placeholder').style.display = 'flex';
+  document.getElementById('issue-category').value = '';
+  document.getElementById('issue-desc').value = '';
+  document.getElementById('img-input').value = '';
+  detectLocation();
+}
+
+function previewImage(input) {
+  if (!input.files[0]) return;
+  S.capturedFile = input.files[0];
+  const url = URL.createObjectURL(S.capturedFile);
+  document.getElementById('preview-img').src = url;
+  document.getElementById('preview-img').style.display = 'block';
+  document.getElementById('camera-placeholder').style.display = 'none';
+}
+
+function detectLocation() {
+  const el = document.getElementById('location-text');
+  el.textContent = 'Detecting…';
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        S.location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        el.textContent = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)} — Hyderabad, Telangana`;
+      },
+      () => {
+        S.location = { lat: 17.5326, lng: 78.2637 };
+        el.textContent = 'Patancheru, Hyderabad, Telangana (demo)';
+      }
+    );
+  } else {
+    S.location = { lat: 17.5326, lng: 78.2637 };
+    el.textContent = 'Patancheru, Hyderabad, Telangana (demo)';
+  }
+}
+
+async function submitReport() {
+  const cat  = v('issue-category');
+  const desc = v('issue-desc');
+  if (!cat)  return showToast('Select a category', true);
+  if (!desc) return showToast('Add a description', true);
+  setLoading('submit-btn', true);
+
+  try {
+    // Check for duplicate first
+    const dupCheck = await api('POST', '/reports/check-duplicate', {
+      category: cat,
+      lat: S.location?.lat,
+      lng: S.location?.lng,
+    });
+
+    if (dupCheck.duplicate) {
+      const dup = dupCheck.report;
+      S.dupReportId = dup.id;
+      const img = dup.image_url || 'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=600&q=80';
+      document.getElementById('dup-card').innerHTML = `
+        <div class="issue-card" style="cursor:default;">
+          <img src="${img}" style="height:100px;width:100%;object-fit:cover;"/>
+          <div class="issue-body">
+            <div class="issue-title">${dup.title}</div>
+            <div class="issue-loc">📍 ${dup.location}</div>
+            <div class="upvote-row"><span class="upvote-btn">👍 ${dup.upvotes} upvotes</span></div>
+          </div>
+        </div>`;
+      goScreen('s-duplicate');
+      return;
+    }
+
+    // Submit new report
+    const form = new FormData();
+    form.append('category',    cat);
+    form.append('description', desc);
+    form.append('location',    v('location-text') || document.getElementById('location-text').textContent);
+    form.append('lat',         S.location?.lat || '');
+    form.append('lng',         S.location?.lng || '');
+    if (S.capturedFile) form.append('image', S.capturedFile);
+
+    const data = await api('POST', '/reports', form, true);
+    document.getElementById('success-id').textContent = '#' + data.report.id;
+    goScreen('s-success');
+    showToast('Report submitted! 🚀');
+  } catch (e) { showToast(e.message, true); }
+  finally { setLoading('submit-btn', false); }
+}
+
+async function upvoteDuplicate() {
+  if (!S.dupReportId) return;
+  try {
+    await api('POST', `/reports/${S.dupReportId}/upvote`);
+    showToast('👍 Upvoted! Authorities will prioritize this.');
+    setTimeout(() => goScreen('s-home'), 1200);
+  } catch (e) { showToast(e.message, true); }
+}
+
+// ── AUTHORITY HOME ────────────────────────────────────────────────────────────
+async function renderAuthHome() {
+  try {
+    const data = await api('GET', `/authority/complaints?status=${S.activeFilter === 'all' ? '' : S.activeFilter}`);
+    const st = data.stats;
+    document.getElementById('a-stat-total').textContent    = st.total;
+    document.getElementById('a-stat-pending').textContent  = st.pending;
+    document.getElementById('a-stat-accepted').textContent = st.accepted;
+    document.getElementById('a-stat-resolved').textContent = st.resolved;
+
+    const el = document.getElementById('complaint-list');
+    if (!data.complaints.length) {
+      el.innerHTML = '<div class="empty-state"><div class="es-icon">📋</div><p>No complaints in this filter.</p></div>';
+      return;
+    }
+    el.innerHTML = data.complaints.map(r => `
+      <div class="auth-card" onclick="openAuthDetail('${r.id}')">
+        <img src="${r.image_url || 'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=600&q=80'}" onerror="this.style.display='none'"/>
+        <div class="auth-card-body">
+          <div class="auth-card-row">
+            <span class="issue-cat">${r.category_label}</span>
+            <span class="status-badge status-${r.status}">${statusLabel(r.status)}</span>
+          </div>
+          <div class="issue-title" style="margin:6px 0 4px;">${r.title}</div>
+          <div class="issue-loc">📍 ${r.location}</div>
+          <div class="upvote-row" style="margin-top:8px;">
+            <span style="font-size:.82rem;color:var(--muted)">👍 ${r.upvotes} upvotes</span>
+            <span style="font-size:.75rem;color:var(--muted);margin-left:8px;">· ${r.created_at?.split('T')[0]||r.created_at}</span>
+          </div>
+        </div>
+      </div>`).join('');
+  } catch (e) {
+    document.getElementById('complaint-list').innerHTML = `<div class="empty-state"><div class="es-icon">⚠️</div><p>${e.message}</p></div>`;
+  }
+}
+
+function filterComplaints(f) {
+  S.activeFilter = f;
+  ['all','pending','accepted','resolved'].forEach(x => {
+    const btn = document.getElementById('filter-' + x);
+    btn.className = (x === f) ? 'btn btn-primary' : 'btn btn-outline';
+    btn.style.cssText = 'padding:8px 16px;font-size:.82rem;white-space:nowrap;';
+  });
+  renderAuthHome();
+}
+
+// ── AUTHORITY DETAIL ──────────────────────────────────────────────────────────
+async function openAuthDetail(id) {
+  S.currentReportId = id;
+  S.resolveFile = null;
+  document.getElementById('resolve-preview').style.display  = 'none';
+  document.getElementById('resolve-placeholder').style.display = 'flex';
+  document.getElementById('mark-resolved-btn').disabled = true;
+  document.getElementById('ad-resolve-section').style.display = 'none';
+  document.getElementById('ad-reject-section').style.display  = 'none';
+
+  try {
+    const data = await api('GET', `/authority/complaints/${id}`);
+    const r = data.complaint;
+
+    document.getElementById('ad-img').src          = r.image_url || '';
+    document.getElementById('ad-cat').textContent  = r.category_label;
+    document.getElementById('ad-title').textContent    = r.title;
+    document.getElementById('ad-location').textContent = r.location;
+    document.getElementById('ad-desc').textContent     = r.description;
+    document.getElementById('ad-upvotes').textContent  = r.upvotes;
+    document.getElementById('ad-date').textContent     = r.created_at?.split('T')[0] || r.created_at;
+    document.getElementById('ad-reporter').textContent = r.reporter ? `${r.reporter.name} · ${r.reporter.email}` : 'Unknown';
+
+    const sb = document.getElementById('ad-status');
+    sb.textContent = statusLabel(r.status); sb.className = 'status-badge status-' + r.status;
+
+    const actEl = document.getElementById('ad-actions');
+    if (r.status === 'pending') {
+      actEl.innerHTML = `
+        <button class="btn btn-primary btn-full" onclick="acceptComplaint()">🔄 Accept Complaint</button>
+        <button class="btn btn-danger btn-full"  onclick="document.getElementById('ad-reject-section').style.display='block'">❌ Reject</button>`;
+    } else if (r.status === 'accepted') {
+      document.getElementById('ad-resolve-section').style.display = 'block';
+      actEl.innerHTML = `<button class="btn btn-danger btn-full" onclick="document.getElementById('ad-reject-section').style.display='block'">❌ Reject</button>`;
+    } else if (r.status === 'resolved') {
+      actEl.innerHTML = `<p style="text-align:center;color:var(--accent2);font-weight:600;">✅ Complaint resolved.</p>`;
+      if (r.resolve_image_url) {
+        document.getElementById('ad-resolve-section').style.display = 'block';
+        document.getElementById('resolve-preview').src = r.resolve_image_url;
+        document.getElementById('resolve-preview').style.display = 'block';
+        document.getElementById('resolve-placeholder').style.display = 'none';
+      }
+    } else if (r.status === 'rejected') {
+      actEl.innerHTML = `<p style="text-align:center;color:var(--danger);font-weight:600;">❌ Rejected: ${r.reject_reason || ''}</p>`;
+    }
+
+    goScreen('s-auth-detail');
+  } catch (e) { showToast(e.message, true); }
+}
+
+async function acceptComplaint() {
+  try {
+    await api('PATCH', `/authority/complaints/${S.currentReportId}/accept`);
+    showToast('Complaint accepted!');
+    document.getElementById('ad-status').textContent = statusLabel('accepted');
+    document.getElementById('ad-status').className   = 'status-badge status-accepted';
+    document.getElementById('ad-actions').innerHTML  = `<button class="btn btn-danger btn-full" onclick="document.getElementById('ad-reject-section').style.display='block'">❌ Reject</button>`;
+    document.getElementById('ad-resolve-section').style.display = 'block';
+  } catch (e) { showToast(e.message, true); }
+}
+
+async function confirmReject() {
+  const reason = v('reject-reason');
+  if (!reason) return showToast('Please provide a reason', true);
+  setLoading('reject-confirm-btn', true);
+  try {
+    await api('PATCH', `/authority/complaints/${S.currentReportId}/reject`, { reason });
+    showToast('Complaint rejected.');
+    document.getElementById('ad-status').textContent = statusLabel('rejected');
+    document.getElementById('ad-status').className   = 'status-badge status-rejected';
+    document.getElementById('ad-actions').innerHTML  = `<p style="text-align:center;color:var(--danger);font-weight:600;">❌ Rejected.</p>`;
+    document.getElementById('ad-reject-section').style.display = 'none';
+    setTimeout(() => goScreen('s-auth-home'), 1500);
+  } catch (e) { showToast(e.message, true); }
+  finally { setLoading('reject-confirm-btn', false); }
+}
+
+function previewResolutionImage(input) {
+  if (!input.files[0]) return;
+  S.resolveFile = input.files[0];
+  document.getElementById('resolve-preview').src = URL.createObjectURL(S.resolveFile);
+  document.getElementById('resolve-preview').style.display = 'block';
+  document.getElementById('resolve-placeholder').style.display = 'none';
+  document.getElementById('mark-resolved-btn').disabled = false;
+  showToast('Resolution photo ready ✅');
+}
+
+async function markAsResolved() {
+  if (!S.resolveFile) return showToast('Capture resolution photo first', true);
+  setLoading('mark-resolved-btn', true);
+  try {
+    const form = new FormData();
+    form.append('resolve_image', S.resolveFile);
+    await api('PATCH', `/authority/complaints/${S.currentReportId}/resolve`, form, true);
+    showToast('Issue marked as resolved! 🎉');
+    document.getElementById('ad-status').textContent = statusLabel('resolved');
+    document.getElementById('ad-status').className   = 'status-badge status-resolved';
+    document.getElementById('ad-actions').innerHTML  = `<p style="text-align:center;color:var(--accent2);font-weight:600;">✅ Resolved!</p>`;
+    setTimeout(() => goScreen('s-auth-home'), 1800);
+  } catch (e) { showToast(e.message, true); }
+  finally { setLoading('mark-resolved-btn', false); }
+}
+
+// ── PROFILE ───────────────────────────────────────────────────────────────────
+async function refreshProfileModal() {
+  if (!S.user) return;
+  const u = S.user;
+  if (u.role === 'authority') {
+    document.getElementById('auth-profile-name').textContent = `${u.first_name} ${u.last_name}`.trim();
+    document.getElementById('auth-profile-dept').textContent = u.dept || '';
+    document.getElementById('auth-profile-id').textContent   = 'ID: ' + (u.auth_id || '---');
+    document.getElementById('auth-profile-avatar').textContent = u.first_name[0].toUpperCase();
+  } else {
+    document.getElementById('profile-name-modal').textContent  = `${u.first_name} ${u.last_name}`.trim();
+    document.getElementById('profile-email-modal').textContent = u.email;
+    document.getElementById('profile-avatar-big').textContent  = u.first_name[0].toUpperCase();
+    try {
+      const data = await api('GET', '/users/me');
+      document.getElementById('pm-total').textContent    = data.stats.total;
+      document.getElementById('pm-resolved').textContent = data.stats.resolved;
+    } catch (_) {}
+  }
+}
+
+function logout() {
+  closeModal('modal-profile');
+  S.token = null; S.user = null;
+  localStorage.removeItem('cp_token');
+  localStorage.removeItem('cp_user');
+  goScreen('s-splash');
+}
+function logoutAuth() {
+  closeModal('modal-auth-profile');
+  S.token = null; S.user = null;
+  localStorage.removeItem('cp_token');
+  localStorage.removeItem('cp_user');
+  goScreen('s-splash');
+}
+
+// ── UTILITIES ─────────────────────────────────────────────────────────────────
+function v(id) { return (document.getElementById(id)?.value || '').trim(); }
+
+let _toastTimer;
+function showToast(msg, isError = false) {
+  document.querySelector('.toast')?.remove();
+  clearTimeout(_toastTimer);
+  const t = document.createElement('div');
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  _toastTimer = setTimeout(() => t.remove(), 3000);
+}
+
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  if (loading) {
+    btn._orig = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner"></span>';
+    btn.disabled = true;
+  } else {
+    if (btn._orig) btn.innerHTML = btn._orig;
+    btn.disabled = false;
+  }
+}
+
+// ── AUTO LOGIN (if token exists) ──────────────────────────────────────────────
+if (S.token && S.user) {
+  afterLogin();
+}
+</script>
+</body>
+</html>
