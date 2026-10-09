@@ -1,0 +1,6 @@
+node_modules/
+civicpulse.db
+civicpulse.db-shm
+civicpulse.db-wal
+uploads/
+.env

@@ -1,231 +1,184 @@
-// routes/authority.js — Authority dashboard: view, accept, reject, resolve
-const express  = require('express');
-const router   = express.Router();
-const multer   = require('multer');
-const path     = require('path');
-const fs       = require('fs');
-const { v4: uuid } = require('uuid');
-const db       = require('../db');
-const { requireAuthority } = require('../middleware/auth');
+// db.js — SQLite database initialization using better-sqlite3
+const Database = require('better-sqlite3');
+const path = require('path');
+const fs = require('fs');
+const bcrypt = require('bcryptjs');
 
-// ─── UPLOAD SETUP (resolution images) ────────────────────────────────────────
+const DB_PATH = process.env.DATABASE_PATH || path.join(__dirname, 'civicpulse.db');
+fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+const db = new Database(DB_PATH);
 
-const uploadsDir = path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+// Enable WAL mode for better performance
+db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename:    (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-    cb(null, `resolve-${uuid()}${ext}`);
-  },
-});
+// ─── CREATE TABLES ───────────────────────────────────────────────────────────
 
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) cb(null, true);
-    else cb(new Error('Only image files allowed'));
-  },
-});
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id          TEXT PRIMARY KEY,
+    first_name  TEXT NOT NULL,
+    last_name   TEXT NOT NULL,
+    email       TEXT UNIQUE NOT NULL,
+    phone       TEXT,
+    password    TEXT NOT NULL,
+    role        TEXT NOT NULL DEFAULT 'citizen',   -- 'citizen' | 'authority'
+    dept        TEXT,                               -- authority only
+    auth_id     TEXT,                               -- authority employee ID
+    created_at  TEXT DEFAULT (datetime('now'))
+  );
 
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
+  CREATE TABLE IF NOT EXISTS otp_store (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    identifier  TEXT NOT NULL,   -- email or phone
+    otp         TEXT NOT NULL,
+    purpose     TEXT NOT NULL,   -- 'login' | 'register'
+    expires_at  TEXT NOT NULL,
+    used        INTEGER DEFAULT 0
+  );
 
-function formatReport(r) {
-  return {
-    id:             r.id,
-    user_id:        r.user_id,
-    title:          r.title,
-    category:       r.category,
-    category_label: r.category_label,
-    description:    r.description,
-    location:       r.location,
-    lat:            r.lat,
-    lng:            r.lng,
-    image_url:      r.image_path
-      ? (r.image_path.startsWith('http') ? r.image_path : `/uploads/${r.image_path}`)
-      : null,
-    resolve_image_url: r.resolve_image
-      ? (r.resolve_image.startsWith('http') ? r.resolve_image : `/uploads/${r.resolve_image}`)
-      : null,
-    status:         r.status,
-    upvotes:        r.upvotes,
-    reject_reason:  r.reject_reason || null,
-    created_at:     r.created_at,
-    updated_at:     r.updated_at,
-    activity:       getActivity(r.id),
-    reporter:       getReporter(r.user_id),
-  };
-}
+  CREATE TABLE IF NOT EXISTS pending_registrations (
+    email         TEXT PRIMARY KEY,
+    first_name    TEXT NOT NULL,
+    last_name     TEXT NOT NULL DEFAULT '',
+    phone         TEXT,
+    password_hash TEXT NOT NULL,
+    role          TEXT NOT NULL CHECK (role IN ('citizen', 'authority')),
+    dept          TEXT,
+    auth_id       TEXT UNIQUE,
+    expires_at    TEXT NOT NULL
+  );
 
-function getActivity(reportId) {
-  return db.prepare(`
-    SELECT a.action, a.note, a.created_at,
-           u.first_name || ' ' || u.last_name AS actor_name, u.role AS actor_role
-    FROM activity_log a
-    JOIN users u ON u.id = a.actor_id
-    WHERE a.report_id = ?
-    ORDER BY a.created_at ASC
-  `).all(reportId);
-}
+  CREATE TABLE IF NOT EXISTS reports (
+    id             TEXT PRIMARY KEY,
+    user_id        TEXT NOT NULL,
+    title          TEXT NOT NULL,
+    category       TEXT NOT NULL,
+    category_label TEXT NOT NULL,
+    description    TEXT NOT NULL,
+    location       TEXT NOT NULL,
+    lat            REAL,
+    lng            REAL,
+    image_path     TEXT,
+    status         TEXT NOT NULL DEFAULT 'pending',  -- pending|accepted|resolved|rejected
+    upvotes        INTEGER DEFAULT 0,
+    resolve_image  TEXT,
+    reject_reason  TEXT,
+    created_at     TEXT DEFAULT (datetime('now')),
+    updated_at     TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
 
-function getReporter(userId) {
-  const u = db.prepare('SELECT first_name, last_name, email, phone FROM users WHERE id=?').get(userId);
-  if (!u) return null;
-  return { name: `${u.first_name} ${u.last_name}`.trim(), email: u.email, phone: u.phone };
-}
+  CREATE TABLE IF NOT EXISTS upvotes (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_id  TEXT NOT NULL,
+    user_id    TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(report_id, user_id),
+    FOREIGN KEY (report_id) REFERENCES reports(id),
+    FOREIGN KEY (user_id)   REFERENCES users(id)
+  );
 
-// ─── GET ALL COMPLAINTS (dashboard) ──────────────────────────────────────────
+  CREATE TABLE IF NOT EXISTS activity_log (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_id  TEXT NOT NULL,
+    actor_id   TEXT NOT NULL,
+    action     TEXT NOT NULL,   -- 'submitted'|'accepted'|'resolved'|'rejected'|'upvoted'
+    note       TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (report_id) REFERENCES reports(id)
+  );
+`);
 
-/**
- * GET /api/authority/complaints?status=&category=
- * Returns all complaints visible to this authority (all in demo; real app: filter by dept/area)
- */
-router.get('/complaints', requireAuthority, (req, res) => {
-  const { status, category } = req.query;
-  let query  = 'SELECT * FROM reports WHERE 1=1';
-  const params = [];
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_reports_user_created ON reports(user_id, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_reports_status_created ON reports(status, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_upvotes_user ON upvotes(user_id);
+  CREATE INDEX IF NOT EXISTS idx_activity_report_created ON activity_log(report_id, created_at);
+`);
 
-  if (status)   { query += ' AND status=?';   params.push(status); }
-  if (category) { query += ' AND category=?'; params.push(category); }
+// ─── SEED DEMO DATA ──────────────────────────────────────────────────────────
 
-  query += ' ORDER BY upvotes DESC, created_at DESC';
+function seedIfEmpty() {
+  const count = db.prepare('SELECT COUNT(*) as n FROM users').get().n;
+  if (count > 0) return; // Already seeded
 
-  const rows = db.prepare(query).all(...params);
+  const hash = bcrypt.hashSync('demo1234', 10);
 
-  // Stats
-  const total    = db.prepare("SELECT COUNT(*) AS n FROM reports").get().n;
-  const pending  = db.prepare("SELECT COUNT(*) AS n FROM reports WHERE status='pending'").get().n;
-  const accepted = db.prepare("SELECT COUNT(*) AS n FROM reports WHERE status='accepted'").get().n;
-  const resolved = db.prepare("SELECT COUNT(*) AS n FROM reports WHERE status='resolved'").get().n;
-  const rejected = db.prepare("SELECT COUNT(*) AS n FROM reports WHERE status='rejected'").get().n;
+  // Demo citizen
+  db.prepare(`
+    INSERT INTO users (id, first_name, last_name, email, phone, password, role)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run('user-demo-001', 'Arjun', 'Sharma', 'arjun@demo.com', '+919876543210', hash, 'citizen');
 
-  res.json({
-    success: true,
-    stats: { total, pending, accepted, resolved, rejected },
-    count:  rows.length,
-    complaints: rows.map(formatReport),
+  // Demo authority
+  db.prepare(`
+    INSERT INTO users (id, first_name, last_name, email, phone, password, role, dept, auth_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run('auth-demo-001', 'Priya', 'Reddy', 'priya@ghmc.gov', '+919800001111', hash, 'authority', 'Roads & Infrastructure', 'GHMC-2024-001');
+
+  // Demo reports
+  const now = new Date().toISOString().split('T')[0];
+
+  const insertReport = db.prepare(`
+    INSERT INTO reports (id, user_id, title, category, category_label, description,
+      location, lat, lng, image_path, status, upvotes, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  insertReport.run(
+    'CP-2024-001', 'user-demo-001',
+    'Large pothole on Main Road',
+    'roads', '🛣️ Roads & Potholes',
+    'There is a large pothole near the bus stop on Main Road. It has caused two accidents in the past week.',
+    'Main Road, Near Bus Stop, Patancheru',
+    17.5326, 78.2637,
+    'https://www.prwlaw.com/wp-content/uploads/2022/09/How-do-potholes-cause-accidents.jpg',
+    'accepted', 14, '2024-01-15', '2024-01-16'
+  );
+
+  insertReport.run(
+    'CP-2024-002', 'user-demo-001',
+    'Street light not working for 3 days',
+    'electricity', '⚡ Street Light / Electricity',
+    'The street light at the corner of Station Road has been off for 3 days making the area unsafe at night.',
+    'Station Road, Miyapur, Hyderabad',
+    17.4955, 78.3562,
+    'https://images.unsplash.com/photo-1476136236990-838240be4859?w=600&q=80',
+    'resolved', 8, '2024-01-10', '2024-01-12'
+  );
+
+  insertReport.run(
+    'CP-2024-003', 'user-demo-001',
+    'Garbage overflow near community park',
+    'garbage', '🗑️ Garbage / Waste',
+    'Garbage bins are overflowing near the community park. Strong smell and unhygienic conditions.',
+    'Community Park, Kondapur, Hyderabad',
+    17.4633, 78.3674,
+    'https://images.unsplash.com/photo-1611270629569-8b357cb88da9?w=600&q=80',
+    'pending', 22, '2024-01-18', '2024-01-18'
+  );
+
+  // Seed upvote counts in upvotes table
+  const insertUp = db.prepare(`INSERT INTO upvotes (report_id, user_id) VALUES (?, ?)`);
+  // Simulate multiple upvoters for demo reports
+  ['auth-demo-001'].forEach(uid => {
+    try { insertUp.run('CP-2024-001', uid); } catch(_){}
+    try { insertUp.run('CP-2024-003', uid); } catch(_){}
   });
-});
 
-// ─── GET SINGLE COMPLAINT ─────────────────────────────────────────────────────
+  // Activity log entries
+  const insertLog = db.prepare(`INSERT INTO activity_log (report_id, actor_id, action, note) VALUES (?,?,?,?)`);
+  insertLog.run('CP-2024-001', 'user-demo-001', 'submitted', null);
+  insertLog.run('CP-2024-001', 'auth-demo-001', 'accepted', null);
+  insertLog.run('CP-2024-002', 'user-demo-001', 'submitted', null);
+  insertLog.run('CP-2024-002', 'auth-demo-001', 'accepted', null);
+  insertLog.run('CP-2024-002', 'auth-demo-001', 'resolved', 'Fixed and tested');
+  insertLog.run('CP-2024-003', 'user-demo-001', 'submitted', null);
 
-/**
- * GET /api/authority/complaints/:id
- */
-router.get('/complaints/:id', requireAuthority, (req, res) => {
-  const r = db.prepare('SELECT * FROM reports WHERE id=?').get(req.params.id);
-  if (!r) return res.status(404).json({ success: false, message: 'Complaint not found' });
-  res.json({ success: true, complaint: formatReport(r) });
-});
+  console.log('✅ Demo data seeded. Login: arjun@demo.com / demo1234 (citizen) | priya@ghmc.gov / demo1234 (authority)');
+}
 
-// ─── ACCEPT COMPLAINT ─────────────────────────────────────────────────────────
+seedIfEmpty();
 
-/**
- * PATCH /api/authority/complaints/:id/accept
- * Changes status: pending → accepted
- */
-router.patch('/complaints/:id/accept', requireAuthority, (req, res) => {
-  const r = db.prepare('SELECT * FROM reports WHERE id=?').get(req.params.id);
-  if (!r) return res.status(404).json({ success: false, message: 'Report not found' });
-  if (r.status !== 'pending') {
-    return res.status(400).json({ success: false, message: `Cannot accept a report with status: ${r.status}` });
-  }
-
-  db.prepare(`UPDATE reports SET status='accepted', updated_at=datetime('now') WHERE id=?`).run(r.id);
-  db.prepare('INSERT INTO activity_log (report_id, actor_id, action) VALUES (?,?,?)').run(r.id, req.user.id, 'accepted');
-
-  const updated = db.prepare('SELECT * FROM reports WHERE id=?').get(r.id);
-  res.json({ success: true, message: 'Complaint accepted', complaint: formatReport(updated) });
-});
-
-// ─── REJECT COMPLAINT ─────────────────────────────────────────────────────────
-
-/**
- * PATCH /api/authority/complaints/:id/reject
- * Body: { reason }
- * Changes status: pending|accepted → rejected
- */
-router.patch('/complaints/:id/reject', requireAuthority, (req, res) => {
-  const { reason } = req.body;
-  if (!reason || !reason.trim()) {
-    return res.status(400).json({ success: false, message: 'A rejection reason is required' });
-  }
-
-  const r = db.prepare('SELECT * FROM reports WHERE id=?').get(req.params.id);
-  if (!r) return res.status(404).json({ success: false, message: 'Report not found' });
-  if (r.status === 'resolved') {
-    return res.status(400).json({ success: false, message: 'Cannot reject an already resolved complaint' });
-  }
-
-  db.prepare(`
-    UPDATE reports SET status='rejected', reject_reason=?, updated_at=datetime('now') WHERE id=?
-  `).run(reason.trim(), r.id);
-  db.prepare('INSERT INTO activity_log (report_id, actor_id, action, note) VALUES (?,?,?,?)').run(r.id, req.user.id, 'rejected', reason.trim());
-
-  const updated = db.prepare('SELECT * FROM reports WHERE id=?').get(r.id);
-  res.json({ success: true, message: 'Complaint rejected', complaint: formatReport(updated) });
-});
-
-// ─── MARK AS RESOLVED (with image proof) ────────────────────────────────────
-
-/**
- * PATCH /api/authority/complaints/:id/resolve
- * Multipart: resolve_image (file) — REQUIRED
- * Status must be 'accepted' before resolving
- */
-router.patch('/complaints/:id/resolve', requireAuthority, upload.single('resolve_image'), (req, res) => {
-  const r = db.prepare('SELECT * FROM reports WHERE id=?').get(req.params.id);
-  if (!r) return res.status(404).json({ success: false, message: 'Report not found' });
-
-  if (r.status !== 'accepted') {
-    return res.status(400).json({
-      success: false,
-      message: `Report must be in "accepted" state before resolving. Current status: ${r.status}`,
-    });
-  }
-
-  if (!req.file) {
-    return res.status(400).json({
-      success: false,
-      message: 'A resolution proof image is required to mark as resolved',
-    });
-  }
-
-  const resolveImg = req.file.filename;
-
-  db.prepare(`
-    UPDATE reports SET status='resolved', resolve_image=?, updated_at=datetime('now') WHERE id=?
-  `).run(resolveImg, r.id);
-  db.prepare('INSERT INTO activity_log (report_id, actor_id, action, note) VALUES (?,?,?,?)').run(r.id, req.user.id, 'resolved', 'Resolution proof uploaded');
-
-  const updated = db.prepare('SELECT * FROM reports WHERE id=?').get(r.id);
-  res.json({ success: true, message: 'Complaint marked as resolved!', complaint: formatReport(updated) });
-});
-
-// ─── DASHBOARD STATS ─────────────────────────────────────────────────────────
-
-/**
- * GET /api/authority/stats
- */
-router.get('/stats', requireAuthority, (req, res) => {
-  const stats = {
-    total:    db.prepare("SELECT COUNT(*) AS n FROM reports").get().n,
-    pending:  db.prepare("SELECT COUNT(*) AS n FROM reports WHERE status='pending'").get().n,
-    accepted: db.prepare("SELECT COUNT(*) AS n FROM reports WHERE status='accepted'").get().n,
-    resolved: db.prepare("SELECT COUNT(*) AS n FROM reports WHERE status='resolved'").get().n,
-    rejected: db.prepare("SELECT COUNT(*) AS n FROM reports WHERE status='rejected'").get().n,
-    by_category: db.prepare(`
-      SELECT category, category_label, COUNT(*) AS count
-      FROM reports GROUP BY category ORDER BY count DESC
-    `).all(),
-    top_upvoted: db.prepare(`
-      SELECT id, title, location, upvotes, status FROM reports
-      ORDER BY upvotes DESC LIMIT 5
-    `).all(),
-  };
-  res.json({ success: true, stats });
-});
-
-module.exports = router;
+module.exports = db;
