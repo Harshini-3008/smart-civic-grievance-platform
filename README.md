@@ -1,54 +1,68 @@
-# Smart Civic Grievance Reporting Platform
+## 🚀 Getting Started
 
-A smart web and mobile platform that enables citizens to easily report civic issues like potholes, broken streetlights, garbage overflow, and water leakages. The system enhances transparency, speeds up resolution, and promotes smart city governance.
+Follow these steps to download and run the project locally.
 
----
+### Prerequisites
 
-## 🚀 Features
-- Photo-based issue reporting with GPS location tagging  
-- Text and voice-based complaint submission  
-- Automatic routing to the right municipal department  
-- Real-time status tracking for users  
-- Analytics dashboard for authorities with heatmaps and reports  
+Install the following software before starting:
 
----
+- [Node.js](https://nodejs.org/) — includes npm
+- [Git](https://git-scm.com/) — to clone the repository
 
-## 🛠️ Technology Stack
-- **Frontend:** React Native (Mobile), React.js (Web)  
-- **Backend:** Node.js + Express  
-- **Database:** MongoDB / IBM Db2  
-- **APIs:** Google Maps, IBM Cloud, Watson NLP  
-- **Hosting:** IBM Cloud / GitHub Pages  
+### 1. Clone the Repository
 
----
+Open a terminal or PowerShell and run:
 
-## 📊 Impact
-- Faster grievance resolution  
-- Transparent citizen-authority communication  
-- Data-driven urban planning  
-- Enhanced civic engagement  
+```bash
+git clone https://github.com/Harshini-3008/smart-civic-grievance-platform.git
+```
 
----
+Move into the project directory:
 
-## 👥 Team
-**Team Name:** Coding Cast  
-**Members:** Somepalli Harshini, Miryala Bhavani, M. Naga Chaitanya, A. Devi Sr  
+```bash
+cd smart-civic-grievance-platform
+```
 
----
+### 2. Install Dependencies
 
-## 📂 Deliverables
-- [Pitch Deck (PPT)](./Smart_Civic_Grievance_Reporting_Platform_Pitch.pptx)  
-- Source code (Frontend & Backend)  
-- Dataset samples (if applicable)  
+Run this command from the project root directory:
 
----
+```bash
+npm install
+```
 
-## 🧠 Future Scope
-- AI-based auto-detection of issue type from images  
-- IoT integration for automatic detection of civic issues  
-- Multilingual support for inclusivity  
+This installs the Node.js packages required by the application.
 
----
+### 3. Start the Application
 
-## 📜 License
-This project is licensed under the **MIT License**.
+Run the backend using:
+
+```bash
+npm start
+```
+
+For development, you can use:
+
+```bash
+npm run dev
+```
+
+The development command uses Nodemon to restart the server when code changes are detected.
+
+### 4. Open the Application
+
+Once the server starts, open your browser and visit the local address configured by the application.
+
+If the frontend is not served automatically by the backend, open `index.html` using a local development server such as the VS Code Live Server extension.
+
+### Troubleshooting
+
+- **Node.js or npm not recognized:** Install Node.js and restart your terminal.
+- **Dependency installation errors:** Check your Node.js version and run `npm install` again.
+- **Port already in use:** Stop the other process using the port or configure a different port in the server code.
+
+### Notes
+
+- The project uses Node.js and Express for the backend.
+- The database uses SQLite through `better-sqlite3`.
+- Install dependencies from the repository root, where `package.json` is located.
